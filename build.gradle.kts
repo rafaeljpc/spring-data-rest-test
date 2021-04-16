@@ -1,16 +1,27 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot") version "2.2.5.RELEASE"
-    id("io.spring.dependency-management") version "1.0.9.RELEASE"
-    kotlin("jvm") version "1.3.61"
-    kotlin("plugin.spring") version "1.3.61"
-    kotlin("plugin.jpa") version "1.3.61"
+    kotlin("jvm") version "1.4.32"
+    kotlin("plugin.spring") version "1.4.32"
+    kotlin("plugin.jpa") version "1.4.32"
+    kotlin("plugin.allopen") version "1.4.32"
+
+    id("org.springframework.boot") version "2.4.5"
+    id("io.spring.dependency-management") version "1.0.11.RELEASE"
 }
 
-group = "com.example"
+if (!JavaVersion.current().isJava11Compatible) {
+    error(
+        """
+        =======================================================
+        RUN WITH JAVA 11
+        =======================================================
+    """.trimIndent()
+    )
+}
+
+group = "io.rafaeljpc.spring.data.rest.test"
 version = "0.0.1-SNAPSHOT"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 repositories {
     mavenCentral()
@@ -21,18 +32,20 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-rest")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.0.2.RELEASE")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.+")
+    implementation("org.springdoc:springdoc-openapi-ui:1.5.+")
+    implementation("org.springdoc:springdoc-openapi-data-rest:1.5.+")
     implementation("com.h2database:h2:1.4.+")
 
     // Test
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.+")
-    testImplementation("com.ninja-squad:springmockk:2.0.+")
-    testImplementation("io.mockk:mockk:1.10.+")
+    testImplementation("com.ninja-squad:springmockk:3.0.+")
+    testImplementation("io.mockk:mockk:1.+")
     testImplementation("com.squareup.okhttp3:mockwebserver:3.14.+")
 
     testImplementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -48,7 +61,14 @@ tasks.withType<Test> {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
         freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "1.8"
     }
+}
+
+tasks.registering(JavaCompile::class) {
+    sourceCompatibility = JavaVersion.VERSION_11.toString()
+    targetCompatibility = JavaVersion.VERSION_11.toString()
+    options.encoding = "UTF-8"
+    options.compilerArgs = listOf("-Xlint:unchecked", "-Xlint:deprecation")
 }
