@@ -2,6 +2,7 @@ package io.rafaeljpc.spring.data.rest.test
 
 import io.rafaeljpc.spring.data.rest.test.model.UserEntity
 import io.rafaeljpc.spring.data.rest.test.repository.UserRepository
+import mu.KotlinLogging
 import org.junit.jupiter.api.Order
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -9,14 +10,18 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.hateoas.CollectionModel
 import org.springframework.hateoas.EntityModel
 import org.springframework.hateoas.MediaTypes
+import org.springframework.hateoas.PagedModel
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.util.UriComponentsBuilder
 import javax.transaction.Transactional
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+
+private val log = KotlinLogging.logger { }
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -31,7 +36,7 @@ class UserRepositoryTest @Autowired constructor(
     @Order(1)
     fun `should register some users`() {
         // Given
-        val rnd = (1..100).random()
+        val rnd = generateId(1..1000)
 
         val user = UserEntity(
             name = "test_${rnd}",
@@ -53,14 +58,17 @@ class UserRepositoryTest @Autowired constructor(
     @Test
     @Transactional
     @Order(2)
-    fun `should list all users`() {
+    fun `should list all users unpaged`() {
         // Given
+        val expectedEntities = mutableListOf<String>()
         repeat(5) {
-            val rnd = (1..100).random()
+            val rnd = generateId(1..1000)
             val user = UserEntity(
                 name = "test_${rnd}",
                 email = "test_${rnd}@test.com"
             )
+
+            expectedEntities.add(user.email)
 
             webTestClient.post()
                 .uri("/api/users").body(BodyInserters.fromValue(user))
@@ -79,8 +87,70 @@ class UserRepositoryTest @Autowired constructor(
         // Then
         assertFalse(userList.isEmpty())
 
-        userList.forEach {
-            assertTrue(it.name.startsWith("test"))
+//        expectedEntities.forEach { email ->
+//            assertNotNull(userList.find { it.email == email }, "$email not returned")
+//        }
+    }
+
+    @Test
+    @Transactional
+    @Order(3)
+    fun `should list all users with page`() {
+        // Given
+        val pageSize = 50
+        repeat(200) {
+            val rnd = generateId(1..1000)
+            val user = UserEntity(
+                name = "test_${rnd}",
+                email = "test_${rnd}@test.com"
+            )
+
+            webTestClient.post()
+                .uri("/api/users").body(BodyInserters.fromValue(user))
+                .exchange().expectStatus().is2xxSuccessful
+        }
+
+        // Two Pages
+        repeat(2) { pageIndex ->
+            // When
+            val parameterizedTypeReference =
+                object : ParameterizedTypeReference<PagedModel<EntityModel<UserEntity>>>() {}
+
+
+            val uri = UriComponentsBuilder.fromPath("/api/users")
+                .replaceQueryParam("page", pageIndex)
+                .replaceQueryParam("size", pageSize)
+                .build().toUriString()
+            log.info { "uri = $uri" }
+
+            val userList = webTestClient.get().uri(uri).accept(MediaTypes.HAL_JSON)
+                .exchange()
+                .expectStatus().is2xxSuccessful.expectBody(parameterizedTypeReference)
+                .returnResult().responseBody?.content?.map { it.content!! }?.toList()
+                ?: error("UNEXPECTED")
+
+            // Then
+            assertFalse(userList.isEmpty(), "page $pageIndex")
+            assertEquals(pageSize, userList.size)
+
+            userList.forEach {
+                assertTrue(it.name.startsWith("test"), "page $pageIndex")
+            }
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        private val GENERATED_IDS_SET = mutableSetOf<Int>()
+
+        @JvmStatic
+        private fun generateId(range: IntRange): Int {
+            var rnd: Int
+            do {
+                rnd = range.random()
+            } while (GENERATED_IDS_SET.contains(rnd))
+            GENERATED_IDS_SET.add(rnd)
+            return rnd
         }
     }
 }

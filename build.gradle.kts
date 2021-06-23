@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.4.32"
-    kotlin("plugin.spring") version "1.4.32"
-    kotlin("plugin.jpa") version "1.4.32"
-    kotlin("plugin.allopen") version "1.4.32"
+    kotlin("jvm") version "1.5.10"
+    kotlin("plugin.spring") version "1.5.10"
+    kotlin("plugin.jpa") version "1.5.10"
+    kotlin("plugin.allopen") version "1.5.10"
 
     id("org.springframework.boot") version "2.4.5"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
@@ -39,12 +39,14 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-ui:1.5.+")
     implementation("org.springdoc:springdoc-openapi-data-rest:1.5.+")
     implementation("com.h2database:h2:1.4.+")
+    implementation("io.github.microutils:kotlin-logging-jvm:2.+")
 
     // Test
+    testImplementation("org.springframework.boot:spring-boot-starter-data-rest")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.+")
-    testImplementation("com.ninja-squad:springmockk:3.0.+")
+    testImplementation("com.ninja-squad:springmockk:3.+")
     testImplementation("io.mockk:mockk:1.+")
     testImplementation("com.squareup.okhttp3:mockwebserver:3.14.+")
 
